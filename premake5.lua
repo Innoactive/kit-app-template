@@ -20,4 +20,10 @@ repo_build.prebuild_copy {
     { "%{root}/tools/deps/user.toml", "%{root}/_build/deps/user.toml" },
 }
 
--- Apps: for each app generate batch files and a project based on kit files (e.g. my_name.my_app.kit)
+define_app("innoactive.usdcomposer.kit")
+define_app("innoactive.usdcomposer_streaming.kit")
+define_app("innoactive.usdcomposer.ar.kit")
+define_app("innoactive.usdcomposer.ar_streaming.kit")
+define_app("innoactive.usdcomposer.vr.kit")
+define_app("innoactive.usdcomposer.vr_streaming.kit")
+

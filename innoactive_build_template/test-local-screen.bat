@@ -1,2 +1,2 @@
 @echo on
-Portal-Omniverse-Wrapper.exe --usd "usd/Astronaut/Astronaut.usd" --portal-interface-mode screen --show-kit-window true
+Portal-Omniverse-Wrapper.exe --usd "https://dsbg.gmbh/ov/JetEngine/JetEngine.usd" --portal-interface-mode screen --show-kit-window true

@@ -35,7 +35,7 @@ class MyExtension(omni.ext.IExt):
         print(f"[innoactive.serverextension] internal set_usd '{usd_file}'")
         self.usd_to_load = usd_file
 
-    def _ensure_camera_temp(self, camera_path="/Root/XRCam", position=(0, 0, 0)):
+    def _ensure_camera_temp(self, camera_path="/SessionLayer/XRCam", position=(0, 0, 0)):
         """
         Ensures a temporary camera with the specified name exists in the stage.
         If not, it creates one at the given position.
@@ -119,7 +119,7 @@ class MyExtension(omni.ext.IExt):
 
             # If AR, then ensure the XRCam camera exists
             if self.interface_mode == "ar":
-                self._ensure_camera_temp("/Root/XRCam", position=(0, 0, 0))
+                self._ensure_camera_temp("/SessionLayer/XRCam", position=(0, 0, 0))
 
         except Exception as e:
             if log_errors:
@@ -171,13 +171,27 @@ class MyExtension(omni.ext.IExt):
         self.usd_to_load = settings.get_as_string("/innoactive/serverextension/usdPath") or self.default_usd
         print(settings.get("/persistent/xr/profile/vr/system/display"))
 
-        # Set the resolution multiplier for VR rendering
-        settings.set("/persistent/xr/profile/vr/system/display", "SteamVR")
-        settings.set("/persistent/xr/profile/vr/render/resolutionMultiplier", 2.0)
-        settings.set("/persistent/xr/profile/vr/foveation/mode", "warped") #none / warped / inset
-        settings.set("/persistent/xr/profile/vr/foveation/warped/resolutionMultiplier", 0.5)
-        settings.set("/persistent/xr/profile/vr/foveation/warped/insetSize", 0.4)
+        if self.interface_mode == "vr":
+            # Set the resolution multiplier for VR rendering
+            settings.set("/persistent/xr/profile/vr/system/display", "SteamVR")
+            settings.set("/persistent/xr/profile/vr/render/resolutionMultiplier", 2.0)
+            settings.set("/persistent/xr/profile/vr/foveation/mode", "warped") #none / warped / inset
+            settings.set("/persistent/xr/profile/vr/foveation/warped/resolutionMultiplier", 0.5)
+            settings.set("/persistent/xr/profile/vr/foveation/warped/insetSize", 0.4)
+        elif self.interface_mode == "ar":
+            settings.set("/xr/cloudxr/version", 4.1)
+            settings.set("/xr/depth/aov", "GBufferDepth")
+            settings.set("/xr/simulatedxr/enabled", True)
+            settings.set("/persistent/renderer/raytracingOmm/enabled", True)
+            settings.set("/rtx-transient/resourcemanager/enableTextureStreaming", False)
+            settings.set("/xr/ui/enabled", False)
+            settings.set("/defaults/xr/profile/ar/renderQuality", "off")
+            settings.set("/defaults/xr/profile/ar/system/display", "CloudXR41")
+            settings.set("/persistent/xr/profile/ar/render/nearPlane", 0.15)
+            settings.set("/persistent/rtx/sceneDb/allowDuplicateAhsInvocation", False)
         
+
+            
         # Get the USD context
         self.usd_context = omni.usd.get_context()
 

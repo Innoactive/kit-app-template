@@ -18,7 +18,7 @@ async def startup_script():
     emptyStage = "usd/Empty/Stage.usd"
     carb.log_info(f"[InnoactiveStartup] Loading USD file: {emptyStage}")
     omni.usd.get_context().open_stage(emptyStage)
-    print("skipping empty stage load")
+    #print("skipping empty stage load")
 
 # Run the script in the event loop
 async def main():

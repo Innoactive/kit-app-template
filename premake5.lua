@@ -17,8 +17,5 @@ repo_build.prebuild_copy {
 
 define_app("innoactive.usdcomposer.kit")
 define_app("innoactive.usdcomposer_streaming.kit")
-define_app("innoactive.usdcomposer.ar.kit")
-define_app("innoactive.usdcomposer.ar_streaming.kit")
-
-define_app("innoactive.usdcomposer.vr.kit")
-define_app("innoactive.usdcomposer.vr_streaming.kit")
+define_app("innoactive.usdstreamer.kit")
+define_app("innoactive.usdstreamer_streaming.kit")

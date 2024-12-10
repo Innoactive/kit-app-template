@@ -30,6 +30,7 @@ class MyExtension(omni.ext.IExt):
     layout_json = "./InnoactiveLayout.json"
     interface_mode = "screen"
     stage = None  # Reference to the USD stage
+    settings = carb.settings.get_settings()
     
     def set_usd(self, usd_file):
         print(f"[innoactive.serverextension] internal set_usd '{usd_file}'")
@@ -65,7 +66,7 @@ class MyExtension(omni.ext.IExt):
                 print(f"[innoactive.serverextension] Failed to add temporary Camera '{camera_path}': {str(e)}")
 
         # Set the camera as active in the viewport
-        self._set_active_camera_in_viewport(camera_path)
+        # self._set_active_camera_in_viewport(camera_path)
 
     def _set_active_camera_in_viewport(self, camera_path):
         """
@@ -120,6 +121,7 @@ class MyExtension(omni.ext.IExt):
             # If AR, then ensure the XRCam camera exists
             if self.interface_mode == "ar":
                 self._ensure_camera_temp("/SessionLayer/XRCam", position=(0, 0, 0))
+                self._apply_ar_settings_after_load()
 
         except Exception as e:
             if log_errors:
@@ -159,38 +161,40 @@ class MyExtension(omni.ext.IExt):
             if log_errors:
                 carb.log_error(f"[innoactive.serverextension] Unexpected error while loading layout: {str(e)}")
 
+    def _apply_ar_settings_after_load(self):
+        print("[innoactive.serverextension] applying AR settings after load")
+        # Innoactive AR Settings
+        self.settings.set("/xrstage/profile/ar/anchorMode", "scene origin")
+        self.settings.set("/xrstage/profile/ar/enableCameraOutput", True)
+        self.settings.set("/xrstage/profile/ar/cameraOutputPath", "/SessionLayer/XRCam")
+        
 
     def on_startup(self, ext_id):
         print("[innoactive.serverextension] Extension startup")
 
-        # Configure OV settings
-        settings = carb.settings.get_settings()
-        
         # Access parameters
-        self.interface_mode = settings.get_as_string("/innoactive/serverextension/interfaceMode") or "screen"
-        self.usd_to_load = settings.get_as_string("/innoactive/serverextension/usdPath") or self.default_usd
-        print(settings.get("/persistent/xr/profile/vr/system/display"))
+        self.interface_mode = self.settings.get_as_string("/innoactive/serverextension/interfaceMode") or "screen"
+        self.usd_to_load = self.settings.get_as_string("/innoactive/serverextension/usdPath") or self.default_usd
+        #print("ANCHOR " + self.settings.get("/xrstage/profile/ar/anchorMode"))
 
         if self.interface_mode == "vr":
             # Set the resolution multiplier for VR rendering
-            settings.set("/persistent/xr/profile/vr/system/display", "SteamVR")
-            settings.set("/persistent/xr/profile/vr/render/resolutionMultiplier", 2.0)
-            settings.set("/persistent/xr/profile/vr/foveation/mode", "warped") #none / warped / inset
-            settings.set("/persistent/xr/profile/vr/foveation/warped/resolutionMultiplier", 0.5)
+            self.settings.set("/persistent/xr/profile/vr/system/display", "SteamVR")
+            self.settings.set("/persistent/xr/profile/vr/render/resolutionMultiplier", 2.0)
+            self.settings.set("/persistent/xr/profile/vr/foveation/mode", "warped") #none / warped / inset
+            self.settings.set("/persistent/xr/profile/vr/foveation/warped/resolutionMultiplier", 0.5)
             settings.set("/persistent/xr/profile/vr/foveation/warped/insetSize", 0.4)
         elif self.interface_mode == "ar":
-            settings.set("/xr/cloudxr/version", 4.1)
-            settings.set("/xr/depth/aov", "GBufferDepth")
-            settings.set("/xr/simulatedxr/enabled", True)
-            settings.set("/persistent/renderer/raytracingOmm/enabled", True)
-            settings.set("/rtx-transient/resourcemanager/enableTextureStreaming", False)
-            settings.set("/xr/ui/enabled", False)
-            settings.set("/defaults/xr/profile/ar/renderQuality", "off")
-            settings.set("/defaults/xr/profile/ar/system/display", "CloudXR41")
-            settings.set("/persistent/xr/profile/ar/render/nearPlane", 0.15)
-            settings.set("/persistent/rtx/sceneDb/allowDuplicateAhsInvocation", False)
-        
-
+            self.settings.set("/xr/cloudxr/version", 4.1)
+            self.settings.set("/xr/depth/aov", "GBufferDepth")
+            self.settings.set("/xr/simulatedxr/enabled", True)
+            self.settings.set("/persistent/renderer/raytracingOmm/enabled", True)
+            self.settings.set("/rtx-transient/resourcemanager/enableTextureStreaming", False)
+            self.settings.set("/xr/ui/enabled", False)
+            self.settings.set("/defaults/xr/profile/ar/renderQuality", "off")
+            self.settings.set("/defaults/xr/profile/ar/system/display", "CloudXR41")
+            self.settings.set("/persistent/xr/profile/ar/render/nearPlane", 0.15)
+            self.settings.set("/persistent/rtx/sceneDb/allowDuplicateAhsInvocation", False)
             
         # Get the USD context
         self.usd_context = omni.usd.get_context()
@@ -200,8 +204,6 @@ class MyExtension(omni.ext.IExt):
             self._on_stage_event,
             name="Stage Event Subscription"
         )
-
-
 
         self._window = ui.Window("Innoactive Server Extension", width=300, height=300)
         with self._window.frame:

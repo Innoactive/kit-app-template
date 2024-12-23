@@ -60,7 +60,7 @@ class MyExtension(omni.ext.IExt):
 
             desired_action = parsed_message.get("actionType")
             # play
-            if desired_action == "play":
+            if desired_action == "start":
                 omni.kit.commands.execute("ToolbarPlayButtonClicked")
             elif desired_action == "pause":
                 omni.kit.commands.execute("ToolbarPauseButtonClicked")

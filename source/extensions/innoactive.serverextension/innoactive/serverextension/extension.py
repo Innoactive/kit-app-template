@@ -59,7 +59,7 @@ class MyExtension(omni.ext.IExt):
 
         carb.log_info(f"[innoactive.serverextension] Received executeAction event: {event.payload}")
 
-        desired_action = event.payload.get("actionType", None)
+        desired_action = event.payload.get("message", {}).get("actionType", None)
         # play
         if desired_action == "play":
             omni.kit.commands.execute('ToolbarPlayButtonClicked')

@@ -40,11 +40,6 @@ class MyExtension(omni.ext.IExt):
 
         # -- register incoming events/messages
         incoming = {
-            # 'openStageRequest': self._on_open_stage,  # request to open a stage
-            # # internal event to capture progress status
-            # "omni.kit.window.status_bar@progress": self._on_progress,
-            # # internal event to capture progress activity
-            # "omni.kit.window.status_bar@activity": self._on_activity,
             # CloudXR data channel
             "executeAction": self._on_execute_action,
         }
@@ -64,7 +59,7 @@ class MyExtension(omni.ext.IExt):
 
         carb.log_info(f"[innoactive.serverextension] Received executeAction event: {event.payload}")
 
-        desired_action = event.payload.get("action", None)
+        desired_action = event.payload.get("actionType", None)
         # play
         if desired_action == "play":
             omni.kit.commands.execute('ToolbarPlayButtonClicked')

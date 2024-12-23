@@ -3,6 +3,7 @@ import omni.ext
 import omni.ui as ui
 import omni.usd
 import omni.kit
+import omni.kit.app
 import omni.kit.commands
 import json
 import carb
@@ -31,7 +32,50 @@ class MyExtension(omni.ext.IExt):
     interface_mode = "screen"
     stage = None  # Reference to the USD stage
     settings = carb.settings.get_settings()
-    
+
+    def __init__(self):
+        super().__init__()
+
+        self._subscriptions = []  # Holds subscription pointers
+
+        # -- register incoming events/messages
+        incoming = {
+            # 'openStageRequest': self._on_open_stage,  # request to open a stage
+            # # internal event to capture progress status
+            # "omni.kit.window.status_bar@progress": self._on_progress,
+            # # internal event to capture progress activity
+            # "omni.kit.window.status_bar@activity": self._on_activity,
+            # CloudXR data channel
+            "executeAction": self._on_execute_action,
+        }
+
+        message_bus = omni.kit.app.get_app().get_message_bus_event_stream()
+        for event_type, handler in incoming.items():
+            carb.log_info(f"[innoactive.serverextension] Subscribing for events: {event_type}")
+            self._subscriptions.append(
+                message_bus.create_subscription_to_pop(
+                    handler, name=event_type
+                )
+            )
+
+    def _on_execute_action(self, event: carb.events.IEvent) -> None:
+        if event.type != carb.events.type_from_string("executeAction"):
+            return
+
+        carb.log_info(f"[innoactive.serverextension] Received executeAction event: {event.payload}")
+
+        desired_action = event.payload.get("action", None)
+        # play
+        if desired_action == "play":
+            omni.kit.commands.execute('ToolbarPlayButtonClicked')
+        elif desired_action == "pause":
+            omni.kit.commands.execute('ToolbarPauseButtonClicked')
+        elif desired_action == "stop":
+            # stop
+            omni.kit.commands.execute('ToolbarStopButtonClicked')
+        else:
+            carb.log_error(f"[innoactive.serverextension] Unknown action: {desired_action}")
+
     def set_usd(self, usd_file):
         print(f"[innoactive.serverextension] internal set_usd '{usd_file}'")
         self.usd_to_load = usd_file
@@ -129,7 +173,7 @@ class MyExtension(omni.ext.IExt):
 
     async def _delayed_load_usd(self, delay = 10):
 
-        await asyncio.sleep(delay) 
+        await asyncio.sleep(delay)
         self.load_usd(usd_file=self.usd_to_load)
 
     def load_layout(self, log_errors=True):
@@ -167,7 +211,7 @@ class MyExtension(omni.ext.IExt):
         self.settings.set("/xrstage/profile/ar/anchorMode", "scene origin")
         self.settings.set("/xrstage/profile/ar/enableCameraOutput", True)
         self.settings.set("/xrstage/profile/ar/cameraOutputPath", "/SessionLayer/XRCam")
-        
+
 
     def on_startup(self, ext_id):
         print("[innoactive.serverextension] Extension startup")
@@ -195,7 +239,7 @@ class MyExtension(omni.ext.IExt):
             self.settings.set("/defaults/xr/profile/ar/system/display", "CloudXR41")
             self.settings.set("/persistent/xr/profile/ar/render/nearPlane", 0.15)
             self.settings.set("/persistent/rtx/sceneDb/allowDuplicateAhsInvocation", False)
-            
+
         # Get the USD context
         self.usd_context = omni.usd.get_context()
 
@@ -210,7 +254,7 @@ class MyExtension(omni.ext.IExt):
             with ui.VStack():
                 label = ui.Label("")
 
-                
+
                 def on_load_usd():
                     self.load_usd(usd_file=self.usd_to_load)
 
@@ -228,8 +272,8 @@ class MyExtension(omni.ext.IExt):
                     # ui.Button("Load USD", clicked_fn=on_load_usd)
                     # ui.Button("Reset", clicked_fn=on_reset_stage)
 
-        
-
     def on_shutdown(self):
         print("[innoactive.serverextension] Extension shutdown")
+        if self._subscriptions:
+            self._subscriptions.clear()
 

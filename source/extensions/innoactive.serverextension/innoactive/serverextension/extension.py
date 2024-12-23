@@ -32,44 +32,49 @@ class MyExtension(omni.ext.IExt):
     interface_mode = "screen"
     stage = None  # Reference to the USD stage
     settings = carb.settings.get_settings()
+    message_bus = None
 
     def __init__(self):
         super().__init__()
 
         self._subscriptions = []  # Holds subscription pointers
-
-        # -- register incoming events/messages
-        incoming = {
-            # CloudXR data channel
-            "executeAction": self._on_execute_action,
-        }
-
-        message_bus = omni.kit.app.get_app().get_message_bus_event_stream()
-        for event_type, handler in incoming.items():
-            carb.log_info(f"[innoactive.serverextension] Subscribing for events: {event_type}")
-            self._subscriptions.append(
-                message_bus.create_subscription_to_pop(
-                    handler, name=event_type
-                )
-            )
+        self.message_bus = omni.kit.app.get_app().get_message_bus_event_stream()
 
     def _on_execute_action(self, event: carb.events.IEvent) -> None:
         if event.type != carb.events.type_from_string("executeAction"):
             return
 
-        carb.log_info(f"[innoactive.serverextension] Received executeAction event: {event.payload}")
+        message = event.payload.get("message", None)
+        if message is None:
+            carb.log_error(
+                f"[innoactive.serverextension] Received executeAction event without message: {event.payload}"
+            )
+            return
 
-        desired_action = event.payload.get("message", {}).get("actionType", None)
-        # play
-        if desired_action == "play":
-            omni.kit.commands.execute('ToolbarPlayButtonClicked')
-        elif desired_action == "pause":
-            omni.kit.commands.execute('ToolbarPauseButtonClicked')
-        elif desired_action == "stop":
-            # stop
-            omni.kit.commands.execute('ToolbarStopButtonClicked')
-        else:
-            carb.log_error(f"[innoactive.serverextension] Unknown action: {desired_action}")
+        try:
+            parsed_message = json.loads(message)
+
+            carb.log_info(
+                f"[innoactive.serverextension] Received executeAction event: {parsed_message}"
+            )
+
+            desired_action = parsed_message.get("actionType")
+            # play
+            if desired_action == "play":
+                omni.kit.commands.execute("ToolbarPlayButtonClicked")
+            elif desired_action == "pause":
+                omni.kit.commands.execute("ToolbarPauseButtonClicked")
+            elif desired_action == "stop":
+                # stop
+                omni.kit.commands.execute("ToolbarStopButtonClicked")
+            else:
+                carb.log_error(
+                    f"[innoactive.serverextension] Unknown action: {desired_action}"
+                )
+        except json.JSONDecodeError:
+            carb.log_error(
+                f"[innoactive.serverextension] Failed to parse message as JSON: {message}"
+            )
 
     def set_usd(self, usd_file):
         carb.log_info(f"internal set_usd '{usd_file}'")
@@ -269,10 +274,27 @@ class MyExtension(omni.ext.IExt):
         self.usd_context = omni.usd.get_context()
 
         # Subscribe to stage events
-        self._subscription = self.usd_context.get_stage_event_stream().create_subscription_to_pop(
-            self._on_stage_event,
-            name="Stage Event Subscription"
+        stage_events = self.usd_context.get_stage_event_stream()
+        self._subscriptions.append(
+            stage_events.create_subscription_to_pop(
+                self._on_stage_event, name="Stage Event Subscription"
+            )
         )
+
+        # -- register incoming events/messages
+        incoming = {
+            # CloudXR data channel
+            "CloudXR Action Handler": self._on_execute_action,
+        }
+
+        message_bus = omni.kit.app.get_app().get_message_bus_event_stream()
+        for event_type, handler in incoming.items():
+            carb.log_info(
+                f"[innoactive.serverextension] Subscribing for events: {event_type}"
+            )
+            self._subscriptions.append(
+                message_bus.create_subscription_to_pop(handler, name=event_type)
+            )
 
         self._window = ui.Window("Innoactive Server Extension", width=300, height=300)
         with self._window.frame:

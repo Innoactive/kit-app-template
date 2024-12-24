@@ -19,6 +19,12 @@ def set_usd(usd):
     MyExtension.set_usd(MyExtension, usd)
 
 
+cloudxr_outgoing_messaging = "omni.kit.cloudxr.send_message"
+cloudxr_outgoing_messages_event_type = carb.events.type_from_string(
+    cloudxr_outgoing_messaging
+)
+
+
 # Any class derived from `omni.ext.IExt` in the top level module (defined in `python.modules` of `extension.toml`) will
 # be instantiated when the extension gets enabled, and `on_startup(ext_id)` will be called.
 # Later when the extension gets disabled on_shutdown() is called.
@@ -39,6 +45,17 @@ class MyExtension(omni.ext.IExt):
 
         self._subscriptions = []  # Holds subscription pointers
         self.message_bus = omni.kit.app.get_app().get_message_bus_event_stream()
+
+    def send_cloudxr_message(self, message: dict):
+        """
+        Sends a message to the CloudXR client.
+        Args:
+            message (dict): The message to send.
+        """
+        self.message_bus.push(
+            cloudxr_outgoing_messages_event_type,
+            payload={"message": json.dumps(message)},
+        )
 
     def _on_execute_action(self, event: carb.events.IEvent) -> None:
         if event.type != carb.events.type_from_string("executeAction"):
@@ -136,7 +153,25 @@ class MyExtension(omni.ext.IExt):
             )
 
     def _on_stage_event(self, event):
-        if event.type == int(omni.usd.StageEventType.OPENED):
+        if event.type == int(omni.usd.StageEventType.OMNIGRAPH_START_PLAY):
+            # notify client that playback has started
+            carb.log_info("Playback started")
+            self.send_cloudxr_message(
+                {"Type": "playbackStatusChanged", "status": "playing"}
+            )
+        elif event.type == int(omni.usd.StageEventType.OMNIGRAPH_STOP_PLAY):
+            # notify client that playback has stopped
+            carb.log_info("Playback stopped")
+            self.send_cloudxr_message(
+                {"Type": "playbackStatusChanged", "status": "stopped"}
+            )
+        elif event.type == int(omni.usd.StageEventType.SIMULATION_STOP_PLAY):
+            # notify client that playback has stopped
+            carb.log_info("Playback stopped")
+            self.send_cloudxr_message(
+                {"Type": "playbackStatusChanged", "status": "paused"}
+            )
+        elif event.type == int(omni.usd.StageEventType.OPENED):
             carb.log_info("Stage has fully loaded!")
             stage_path = self.usd_context.get_stage_url()
             carb.log_info(f"Stage {stage_path}")

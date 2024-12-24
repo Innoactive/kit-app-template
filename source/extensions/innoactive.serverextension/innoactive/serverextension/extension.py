@@ -39,6 +39,7 @@ class MyExtension(omni.ext.IExt):
     stage = None  # Reference to the USD stage
     settings = carb.settings.get_settings()
     message_bus = None
+    usd_context = None
 
     def __init__(self):
         super().__init__()

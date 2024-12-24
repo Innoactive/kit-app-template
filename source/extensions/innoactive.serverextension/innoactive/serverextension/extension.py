@@ -40,6 +40,7 @@ class MyExtension(omni.ext.IExt):
     settings = carb.settings.get_settings()
     message_bus = None
     usd_context = None
+    is_loading = False
 
     def __init__(self):
         super().__init__()
@@ -232,6 +233,8 @@ class MyExtension(omni.ext.IExt):
                 )
                 asyncio.ensure_future(self._delayed_load_usd(delay))
             else:
+                # The USD is loaded on the stage but the files just began to load
+                self.is_loading = True
                 carb.log_info(f"USD loaded: {stage_path}")
                 self.load_layout()
 

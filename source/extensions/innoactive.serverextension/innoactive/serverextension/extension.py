@@ -153,6 +153,48 @@ class MyExtension(omni.ext.IExt):
                 f"Failed to set active camera in the viewport '{camera_path}': {str(e)}"
             )
 
+    def _on_tick(self, _event):
+        """
+        Handler for the Update Loop event.
+        """
+        # carb.log_info(f"Update Loop event: {event.type} => {event.payload}")
+
+        if self.is_loading:
+            # check how many files have been loaded on stage
+            _loading_message, num_loaded_files, num_total_files = (
+                omni.usd.get_context().get_stage_loading_status()
+            )
+
+            is_loading = num_loaded_files or num_total_files
+
+            if not is_loading:
+                carb.log_verbose("Finished loading.")
+                self.is_loading = False
+                self.send_loading_progress(1)
+                return
+
+            # carb.log_info(
+            #     f"TICK: Loading message: {loading_message[:10]}... ({num_loaded_files}/{num_total_files})"
+            # )
+
+            # calculate the progress
+            progress = num_loaded_files / num_total_files
+            self.send_loading_progress(progress)
+
+    def send_loading_progress(self, progress: float):
+        """
+        Sends the loading progress to the client.
+        Args:
+            progress (float): The progress value to send.
+        """
+        carb.log_info(f"Sending loading progress: {progress}")
+        message = {
+            # XXX: For some reason, the CXR team chose to use "Type" instead of "type" in the message
+            "Type": "fileLoadingProgress",
+            "progress": progress,
+        }
+        self.send_cloudxr_message(message)
+
     def _on_stage_event(self, event):
         if event.type == int(omni.usd.StageEventType.OMNIGRAPH_START_PLAY):
             # notify client that playback has started
@@ -317,26 +359,26 @@ class MyExtension(omni.ext.IExt):
             )
         )
 
-        # -- register incoming events/messages
-        incoming = {
-            # CloudXR data channel
-            "CloudXR Action Handler": self._on_execute_action,
-        }
+        # Subscribe to update loop
+        update_stream = omni.kit.app.get_app().get_update_event_stream()
+        self._subscriptions.append(
+            update_stream.create_subscription_to_pop(
+                self._on_tick, name="Update Loop Subscription"
+            )
+        )
 
+        # Subscribe to incoming cloudxr message events
         message_bus = omni.kit.app.get_app().get_message_bus_event_stream()
-        for event_type, handler in incoming.items():
-            carb.log_info(
-                f"[innoactive.serverextension] Subscribing for events: {event_type}"
+        self._subscriptions.append(
+            message_bus.create_subscription_to_pop(
+                self._on_execute_action, name="CloudXR Incoming Message Handler"
             )
-            self._subscriptions.append(
-                message_bus.create_subscription_to_pop(handler, name=event_type)
-            )
+        )
 
         self._window = ui.Window("Innoactive Server Extension", width=300, height=300)
         with self._window.frame:
             with ui.VStack():
                 label = ui.Label("")
-
 
                 def on_load_usd():
                     self.load_usd(usd_file=self.usd_to_load)

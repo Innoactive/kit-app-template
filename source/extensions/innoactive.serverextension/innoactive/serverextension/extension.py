@@ -24,6 +24,8 @@ cloudxr_outgoing_messages_event_type = carb.events.type_from_string(
     cloudxr_outgoing_messaging
 )
 
+control_playback_event_type = carb.events.type_from_string("controlPlayback")
+load_usd_event_type = carb.events.type_from_string("loadUsd")
 
 # Any class derived from `omni.ext.IExt` in the top level module (defined in `python.modules` of `extension.toml`) will
 # be instantiated when the extension gets enabled, and `on_startup(ext_id)` will be called.
@@ -59,14 +61,14 @@ class MyExtension(omni.ext.IExt):
             payload={"message": json.dumps(message)},
         )
 
-    def _on_execute_action(self, event: carb.events.IEvent) -> None:
-        if event.type != carb.events.type_from_string("executeAction"):
+    def _on_control_playback(self, event: carb.events.IEvent) -> None:
+        if event.type != control_playback_event_type:
             return
 
         message = event.payload.get("message", None)
         if message is None:
             carb.log_error(
-                f"[innoactive.serverextension] Received executeAction event without message: {event.payload}"
+                f"[innoactive.serverextension] Received controlPlayback event without message: {event.payload}"
             )
             return
 
@@ -74,7 +76,7 @@ class MyExtension(omni.ext.IExt):
             parsed_message = json.loads(message)
 
             carb.log_info(
-                f"[innoactive.serverextension] Received executeAction event: {parsed_message}"
+                f"[innoactive.serverextension] Received controlPlayback event: {parsed_message}"
             )
 
             desired_action = parsed_message.get("actionType")
@@ -90,6 +92,31 @@ class MyExtension(omni.ext.IExt):
                 carb.log_error(
                     f"[innoactive.serverextension] Unknown action: {desired_action}"
                 )
+        except json.JSONDecodeError:
+            carb.log_error(
+                f"[innoactive.serverextension] Failed to parse message as JSON: {message}"
+            )
+
+    def _on_load_usd(self, event: carb.events.IEvent) -> None:
+        if event.type != load_usd_event_type:
+            return
+
+        message = event.payload.get("message", None)
+        if message is None:
+            carb.log_error(
+                f"[innoactive.serverextension] Received loadUsd event without message: {event.payload}"
+            )
+            return
+
+        try:
+            parsed_message = json.loads(message)
+
+            carb.log_info(
+                f"[innoactive.serverextension] Received loadUsd event: {parsed_message}"
+            )
+
+            desired_action = parsed_message.get("path")
+            self.load_usd(usd_file=desired_action)
         except json.JSONDecodeError:
             carb.log_error(
                 f"[innoactive.serverextension] Failed to parse message as JSON: {message}"
@@ -374,7 +401,12 @@ class MyExtension(omni.ext.IExt):
         message_bus = omni.kit.app.get_app().get_message_bus_event_stream()
         self._subscriptions.append(
             message_bus.create_subscription_to_pop(
-                self._on_execute_action, name="CloudXR Incoming Message Handler"
+                self._on_control_playback, name="Control Playback via CloudXR"
+            )
+        )
+        self._subscriptions.append(
+            message_bus.create_subscription_to_pop(
+                self._on_load_usd, name="Load USD via CloudXR"
             )
         )
 

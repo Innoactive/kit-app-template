@@ -27,6 +27,7 @@ cloudxr_outgoing_messages_event_type = carb.events.type_from_string(
 control_playback_event_type = carb.events.type_from_string("controlPlayback")
 load_usd_event_type = carb.events.type_from_string("loadUsd")
 
+
 # Any class derived from `omni.ext.IExt` in the top level module (defined in `python.modules` of `extension.toml`) will
 # be instantiated when the extension gets enabled, and `on_startup(ext_id)` will be called.
 # Later when the extension gets disabled on_shutdown() is called.
@@ -135,7 +136,7 @@ class MyExtension(omni.ext.IExt):
         Sets the camera as the active camera for the viewport.
         """
         if not self.stage:
-            carb.log_warning("Stage is not loaded.")
+            carb.log_warn("Stage is not loaded.")
             return
 
         # Check if the camera already exists

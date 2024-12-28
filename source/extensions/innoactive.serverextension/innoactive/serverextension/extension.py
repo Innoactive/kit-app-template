@@ -69,16 +69,14 @@ class MyExtension(omni.ext.IExt):
         message = event.payload.get("message", None)
         if message is None:
             carb.log_error(
-                f"[innoactive.serverextension] Received controlPlayback event without message: {event.payload}"
+                f"Received controlPlayback event without message: {event.payload}"
             )
             return
 
         try:
             parsed_message = json.loads(message)
 
-            carb.log_info(
-                f"[innoactive.serverextension] Received controlPlayback event: {parsed_message}"
-            )
+            carb.log_info(f"Received controlPlayback event: {parsed_message}")
 
             desired_action = parsed_message.get("actionType")
             # play
@@ -90,13 +88,9 @@ class MyExtension(omni.ext.IExt):
                 # stop
                 omni.kit.commands.execute("ToolbarStopButtonClicked")
             else:
-                carb.log_error(
-                    f"[innoactive.serverextension] Unknown action: {desired_action}"
-                )
+                carb.log_error(f"Unknown action: {desired_action}")
         except json.JSONDecodeError:
-            carb.log_error(
-                f"[innoactive.serverextension] Failed to parse message as JSON: {message}"
-            )
+            carb.log_error(f"Failed to parse message as JSON: {message}")
 
     def _on_load_usd(self, event: carb.events.IEvent) -> None:
         if event.type != load_usd_event_type:
@@ -104,24 +98,18 @@ class MyExtension(omni.ext.IExt):
 
         message = event.payload.get("message", None)
         if message is None:
-            carb.log_error(
-                f"[innoactive.serverextension] Received loadUsd event without message: {event.payload}"
-            )
+            carb.log_error(f"Received loadUsd event without message: {event.payload}")
             return
 
         try:
             parsed_message = json.loads(message)
 
-            carb.log_info(
-                f"[innoactive.serverextension] Received loadUsd event: {parsed_message}"
-            )
+            carb.log_info(f"Received loadUsd event: {parsed_message}")
 
             desired_action = parsed_message.get("path")
             self.load_usd(usd_file=desired_action)
         except json.JSONDecodeError:
-            carb.log_error(
-                f"[innoactive.serverextension] Failed to parse message as JSON: {message}"
-            )
+            carb.log_error(f"Failed to parse message as JSON: {message}")
 
     def set_usd(self, usd_file):
         carb.log_info(f"internal set_usd '{usd_file}'")
@@ -273,6 +261,7 @@ class MyExtension(omni.ext.IExt):
             usd_file (str): Path to the USD file to load.
             log_errors (bool): Whether to log errors if loading fails.
         """
+
         if not isinstance(usd_file, str):
             if log_errors:
                 carb.log_error(f"Invalid USD path: {usd_file}. Must be a string.")

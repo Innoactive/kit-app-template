@@ -11,6 +11,7 @@ import carb.settings
 import asyncio  # Import asyncio for the delay
 from pxr import Usd, UsdGeom, Gf
 from omni.kit.viewport.utility import get_active_viewport
+from .throttle import throttle
 
 
 # Functions and vars are available to other extensions as usual in python: `innoactive.serverextension.some_public_function(x)`
@@ -106,8 +107,8 @@ class MyExtension(omni.ext.IExt):
 
             carb.log_info(f"Received loadUsd event: {parsed_message}")
 
-            desired_action = parsed_message.get("path")
-            self.load_usd(usd_file=desired_action)
+            usd_file_path = parsed_message.get("path")
+            self.load_usd(usd_file=usd_file_path)
         except json.JSONDecodeError:
             carb.log_error(f"Failed to parse message as JSON: {message}")
 
@@ -198,6 +199,9 @@ class MyExtension(omni.ext.IExt):
             progress = num_loaded_files / num_total_files
             self.send_loading_progress(progress)
 
+    @throttle(
+        seconds=1, skip_condition=lambda *args, **kwargs: kwargs.get("progress") == 1
+    )
     def send_loading_progress(self, progress: float):
         """
         Sends the loading progress to the client.
